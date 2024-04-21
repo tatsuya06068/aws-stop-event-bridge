@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  EventBridge Scheduler to stop RDS instance
+
+Parameters:
+  Name:
+    Type: String
+  Description:
+    Type: String
+  ScheduleStopTime:
+    Type: String
+    Default: "cron(0 20 * * ? *)"
+  ScheduleTimezone:
+    Type: String
+    Default: Japan
+  FlexibleTimeWindow:
+    Type: String
+    Default: "OFF"
+  State: 
+    Type: String
+  RoleArn:
+    Type: String
+  Input:
+    Type: String
+
+Resources:
+  ## EventBridgeSchedulerの作成
+  EvnetBridgeScheduler:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Ref Name
+      Description: !Ref Description
+      ScheduleExpression: !Ref ScheduleStopTime 
+      ScheduleExpressionTimezone: !Ref ScheduleTimezone
+      FlexibleTimeWindow:
+        Mode: !Ref FlexibleTimeWindow
+      State: !Ref State
+      Target:
+        Arn: arn:aws:scheduler:::aws-sdk:rds:stopDBInstance
+        Input: !Sub |-
+          {
+            "DbInstanceIdentifier": "${InstanceId}"
+          }
+        RoleArn: !Ref RoleArn
+  
+  ## EventBridgeSchedulerに紐付けるIAMロールの作成     
+  SchedulerRDSStopRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - scheduler.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: rdsstop
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds:StopDBInstance
+                Resource:
+                  - "*"
+
+  AWSTemplateFormatVersion: '2010-09-09'
+  Description:  EventBridge Scheduler to start/stop EC2 instance
+  Parameters:
+    InstanceId:
+      Type: AWS::EC2::Instance::Id
+    ScheduleStartTime:
+      Type: String
+      Default: "cron(0 8 * * ? *)"
+    ScheduleStopTime:
+      Type: String
+      Default: "cron(0 19 * * ? *)"
+    ScheduleTimezone:
+      Type: String
+      Default: Japan
+  Resources:
+    ScheduleEC2Sart:
+      Type: AWS::Scheduler::Schedule
+      Properties:
+        Name: !Sub 'EC2-Start-${InstanceId}'
+        Description: Start EC2 Instance
+        ScheduleExpression: !Ref ScheduleStartTime 
+        ScheduleExpressionTimezone: !Ref ScheduleTimezone
+        FlexibleTimeWindow:
+          Mode: "OFF"
+        State: ENABLED
+        Target:
+          Arn: arn:aws:scheduler:::aws-sdk:ec2:startInstances
+          Input: !Sub |-
+            {
+              "InstanceIds": ["${InstanceId}"]
+            }
+          RoleArn:
+            Fn::GetAtt:
+            - SchedulerEC2StopStartRole
+            - Arn
+
+  ScheduleEC2Stop:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub 'EC2-Stop-${InstanceId}'
+      Description: Stop EC2 Instance
+      ScheduleExpression: !Ref ScheduleStopTime 
+      ScheduleExpressionTimezone: !Ref ScheduleTimezone
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      State: ENABLED
+      Target:
+        Arn: arn:aws:scheduler:::aws-sdk:ec2:stopInstances
+        Input: !Sub |-
+          {
+            "InstanceIds": ["${InstanceId}"]
+          }
+        RoleArn:
+          Fn::GetAtt:
+          - SchedulerEC2StopStartRole
+          - Arn
+          
+  SchedulerEC2StopStartRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - scheduler.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: EC2StopStart
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                Resource:
+                  - "*"
+  
+  ScheduledRuleStop:
+    Type: AWS::Scheduler::Schedule
+    Properties: 
+      Description: "Schedule to stop Fargate task"
+      Name: !Sub "${NamePrefix}-stop-ecs-task-schedule"
+      ScheduleExpression: !Ref StopScheduleExpression
+      ScheduleExpressionTimezone: !Ref ScheduleExpressionTimezone
+      FlexibleTimeWindow: 
+        Mode: "OFF"
+      State: "ENABLED"
+      Target: 
+        Arn: "arn:aws:scheduler:::aws-sdk:ecs:updateService"
+        Input: !Sub "{ \"DesiredCount\": ${StopDesiredCount}, \"Service\": \"${EcsServiceName}\", \"Cluster\": \"${EcsClusterName}\" }"
+        RoleArn: !GetAtt ScheduleRole.Arn
+        RetryPolicy: 
+          MaximumRetryAttempts: 0
+
+  ScheduledRuleStart:
+    Type: AWS::Scheduler::Schedule
+    Properties: 
+      Description: "Schedule to start Fargate task"
+      Name: !Sub "${NamePrefix}-start-ecs-task-schedule"
+      ScheduleExpression: !Ref StartScheduleExpression
+      ScheduleExpressionTimezone: !Ref ScheduleExpressionTimezone
+      FlexibleTimeWindow: 
+        Mode: "OFF"
+      State: "ENABLED"
+      Target: 
+        Arn: "arn:aws:scheduler:::aws-sdk:ecs:updateService"
+        Input: !Sub "{ \"DesiredCount\": ${StartDesiredCount}, \"Service\": \"${EcsServiceName}\", \"Cluster\": \"${EcsClusterName}\" }"
+        RoleArn: !GetAtt ScheduleRole.Arn
+        RetryPolicy: 
+          MaximumRetryAttempts: 0
+
+
+
+## Stop resources
+### RDS　○
+### EC2　○
+### ECS(FARGATE) ○
+### NAT Gateway　

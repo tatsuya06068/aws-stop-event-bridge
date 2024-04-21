@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  EventBridge Scheduler Role
+
+Parameters:
+  RoleName:
+    Type: String
+  PolicyName:
+    Type: String
+  Action:
+    Type: CommaDelimitedList
+  
+
+Resources:
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - scheduler.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: !ref PolicyName
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                Resource:
+                  - "*"
+
+### RDS
+#  rds:StartDBInstance
+#  rds:StopDBInstance
+
+### EC2
+#  ec2:StartInstances
+#  ec2:StopInstances
+
+### ECS
+#  - ecs:UpdateService

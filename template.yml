@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  EnvName:
+    Type: String
+  HostingBucketName:
+    Type: String
+  DomainName:
+    Type: String
+
+Resources:
+  ScheduleRDSRole:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: resources/event-bridge-scheduler/role.yml
+      Parameters:
+        BucketName: !Join ["-", [!Ref EnvName, !Ref HostingBucketName]]
+
+
+  ScheduleRDSStop:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: resources/event-bridge-scheduler/event-bridge-scheduler.yml
+      Parameters:
+        Name: "RDS-SROP-SCHEDULE"
+        Description: "RDS stop schedule"
+        ScheduleStopTime: "cron(0 22 * * MON-FRI *)"
+        ScheduleTimezone: "Asia/Tokyo"
+        FlexibleTimeWindow: "OFF"
+        State: "DISABLE"
+        RoleArn: 
+        Input:
+  
+
+
+  ScheduleRDSStart:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: resources/event-bridge-scheduler/event-bridge-scheduler.yml
+      Parameters:
+        Name: "RDS-START-SCHEDULE"
+        Description: "RDS start schedule"
+        ScheduleStopTime: "cron(0 8 * * MON-FRI *)"
+        ScheduleTimezone: "Asia/Tokyo"
+        FlexibleTimeWindow: "OFF"
+        State: "DISABLE"
+        RoleArn: 
+        Input:
+
+
+  ScheduleEC2Stop:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: resources/event-bridge-scheduler/event-bridge-scheduler.yml
+      Parameters:
+        Name: "EC2-SROP-SCHEDULE"
+        Description: "ec2 stop scheduler"
+        ScheduleStopTime: "cron(0 22 * * MON-FRI *)"
+        ScheduleTimezone: "Asia/Tokyo"
+        FlexibleTimeWindow: "OFF"
+        State: "DISABLE"
+        RoleArn: 
+        Input:
+  
+
+  ScheduleEC2Start:
+    Type: AWS::CloudFormation::Stack
+    Parameters:
+        Name: "EC2-START-SCHEDULE"
+        Description: "EC2 start schedule"
+        ScheduleStopTime: "cron(0 8 * * MON-FRI *)"
+        ScheduleTimezone: "Asia/Tokyo"
+        FlexibleTimeWindow: "OFF"
+        State: "DISABLE"
+        RoleArn: 
+        Input:
+
+  ScheduleECSStop:
+    Type: AWS::CloudFormation::Stack
+    Parameters:
+        Name: "ECS-STOP-SCHEDULE"
+        Description: "ECS stop schedule"
+        ScheduleStopTime: "cron(0 22 * * MON-FRI *)"
+        ScheduleTimezone: "Asia/Tokyo"
+        FlexibleTimeWindow: "OFF"
+        State: "DISABLE"
+        RoleArn: 
+        Input:
+
+  ScheduleECSStart:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: resources/event-bridge-scheduler/event-bridge-scheduler.yml
+      Parameters:
+        Name: "ECS-START-SCHEDULE"
+        Description: "ECS start schedule"
+        ScheduleStopTime: "cron(0 8 * * MON-FRI *)"
+        ScheduleTimezone: "Asia/Tokyo"
+        FlexibleTimeWindow: "OFF"
+        State: "DISABLE"
+        RoleArn: 
+        Input:
