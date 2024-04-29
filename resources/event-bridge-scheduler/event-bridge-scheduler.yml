@@ -183,6 +183,31 @@ Resources:
         RetryPolicy: 
           MaximumRetryAttempts: 0
 
+  # Nat gateway
+  StartEventBridgeRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: 'StartNatGatewayDaily'
+      Description: 'Trigger Lambda function to start Nat Gateway daily at 9:00 AM'
+      ScheduleExpression: 'cron(0 8 * * ? *)'  # 毎日午前8時に実行
+      State: 'ENABLED'
+      Targets:
+        - Arn: 'arn:aws:lambda:REGION:ACCOUNT_ID:function:FUNCTION_NAME'
+          Id: 'StartTargetFunction'
+          Input: '{"action": "start"}'  # Lambda関数に渡すデータ：Nat Gatewayを開始するアクション
+
+  StopEventBridgeRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: 'StopNatGatewayDaily'
+      Description: 'Trigger Lambda function to stop Nat Gateway daily at 6:00 PM'
+      ScheduleExpression: 'cron(0 22 * * ? *)'  # 毎日午後10時に実行
+      State: 'ENABLED'
+      Targets:
+        - Arn: 'arn:aws:lambda:REGION:ACCOUNT_ID:function:FUNCTION_NAME'
+          Id: 'StopTargetFunction'
+          Input: '{"action": "stop"}'  # Lambda関数に渡すデータ：Nat Gatewayを停止するアクション
+
 
 
 ## Stop resources
